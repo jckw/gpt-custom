@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { Readability } from "@mozilla/readability"
 import { Input } from "./components/ui/input"
 import { Button } from "./components/ui/button"
@@ -29,6 +29,7 @@ function requestFromTab<T>(message: unknown): Promise<T> {
 }
 
 function App() {
+  const formRef = useRef<HTMLFormElement>(null)
   const [openAIKey, setOpenAIKey] = useState<string>("")
   const [prompt, setPrompt] = useState<string>("")
   const [response, setResponse] = useState<string>("")
@@ -73,27 +74,39 @@ function App() {
   }, [])
 
   return (
-    <div className="w-96 p-8 flex flex-col gap-4">
-      <Input
-        value={openAIKey}
-        onChange={(e) => handleOpenAIKeyChange(e.target.value)}
-        placeholder="OpenAI API Key"
-        type="password"
-      />
-      <Textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Prompt"
-      />
-      <Button
-        onClick={() => generateMutation.mutate(prompt)}
-        disabled={generateMutation.isLoading}
+    <div className="w-96 p-8">
+      <form
+        ref={formRef}
+        className="flex flex-col gap-4 mb-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          generateMutation.mutate(prompt)
+        }}
       >
-        {generateMutation.isLoading && (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        )}
-        Run prompt
-      </Button>
+        <Input
+          value={openAIKey}
+          onChange={(e) => handleOpenAIKeyChange(e.target.value)}
+          placeholder="OpenAI API Key"
+          type="password"
+        />
+        <Textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Prompt"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              generateMutation.mutate(prompt)
+            }
+          }}
+        />
+        <Button type="submit" disabled={generateMutation.isLoading}>
+          {generateMutation.isLoading && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          Run prompt
+        </Button>
+      </form>
       {/* {articleQuery.data?.textContent.split("\n").map((line, i) => (
         <p key={i}>{line}</p>
       ))} */}
