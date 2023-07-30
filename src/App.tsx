@@ -14,17 +14,28 @@ import { Loader2 } from "lucide-react"
 
 type ReadabilityResult = ReturnType<Readability["parse"]>
 
+function requestFromTab<T>(message: unknown): Promise<T> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs[0].id) {
+        reject(new Error("No active tab found"))
+        return
+      }
+      chrome.tabs.sendMessage(tabs[0].id, message, (response) => {
+        resolve(response)
+      })
+    })
+  })
+}
+
 function App() {
-  const [article, setArticle] = useState<ReadabilityResult>(null)
   const [openAIKey, setOpenAIKey] = useState<string>("")
   const [prompt, setPrompt] = useState<string>("")
   const [response, setResponse] = useState<string>("")
 
-  useQuery(["article"], () => chrome.storage.local.get("article"), {
-    onSuccess: (result) => {
-      setArticle(result.article)
-    },
-  })
+  const articleQuery = useQuery(["article"], () =>
+    requestFromTab<ReadabilityResult>("refreshContent")
+  )
 
   useQuery(["openAIKey"], () => chrome.storage.local.get("openAIKey"), {
     onSuccess: (result) => {
@@ -44,7 +55,7 @@ function App() {
         messages: [
           {
             role: "user",
-            content: `${prompt}\n\nARTICLE:${article?.textContent}`,
+            content: `${prompt}\n\nARTICLE:${articleQuery.data?.textContent}`,
           },
         ],
       })
@@ -62,7 +73,7 @@ function App() {
   }, [])
 
   return (
-    <div className="w-80 p-8 flex flex-col gap-4">
+    <div className="w-96 p-8 flex flex-col gap-4">
       <Input
         value={openAIKey}
         onChange={(e) => handleOpenAIKeyChange(e.target.value)}
@@ -83,7 +94,12 @@ function App() {
         )}
         Run prompt
       </Button>
-      <p>{response}</p>
+      {/* {articleQuery.data?.textContent.split("\n").map((line, i) => (
+        <p key={i}>{line}</p>
+      ))} */}
+      {response.split("\n").map((line, i) => (
+        <p key={i}>{line}</p>
+      ))}
     </div>
   )
 }
