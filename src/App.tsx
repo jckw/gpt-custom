@@ -107,9 +107,9 @@ function App() {
           Run prompt
         </Button>
       </form>
-      {/* {articleQuery.data?.textContent.split("\n").map((line, i) => (
-        <p key={i}>{line}</p>
-      ))} */}
+      <a href={`${chrome.runtime.getURL("")}?tabId=12345`} target="_blank">
+        {chrome.runtime.getURL("")}
+      </a>
       {response.split("\n").map((line, i) => (
         <p key={i}>{line}</p>
       ))}
@@ -119,10 +119,22 @@ function App() {
 
 const queryClient = new QueryClient()
 
+const FullTabApp = () => {
+  const currentURL = window.location.href
+  const url = new URL(currentURL)
+  const params = new URLSearchParams(url.search)
+  const tabId = params.get("tabId")
+
+  return <p>{tabId}</p>
+}
+
 const WrappedApp = () => {
+  const views = chrome.extension.getViews({ type: "popup" })
+  const isInPopupWindow = views.some((view) => view === window)
+
   return (
     <QueryClientProvider client={queryClient}>
-      <App />
+      {isInPopupWindow ? <App /> : <FullTabApp />}
     </QueryClientProvider>
   )
 }
